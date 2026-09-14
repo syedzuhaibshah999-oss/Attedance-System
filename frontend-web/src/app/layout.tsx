@@ -10,7 +10,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "UET Peshawar | Attendance System",
+  title: "Department of Software Engineering UET PESHAWAR | Attendance System",
   description: "Official QR-based attendance management system for University of Engineering and Technology, Peshawar.",
 };
 
@@ -27,3 +27,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+

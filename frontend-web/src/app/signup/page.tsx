@@ -6,7 +6,22 @@ import { getApiBase } from '@/lib/api';
 import Link from 'next/link';
 import Image from 'next/image';
 
-export default function Signup() {
+async function getDeviceFingerprint(): Promise<string> {
+  const raw = [
+    navigator.userAgent,
+    screen.width, screen.height, screen.colorDepth,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    navigator.language,
+    navigator.hardwareConcurrency || 0,
+  ].join('|');
+  const encoder = new TextEncoder();
+  const data = encoder.encode(raw);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export default function TeacherSignup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -20,6 +35,8 @@ export default function Signup() {
     setError('');
 
     try {
+      const fingerprint = await getDeviceFingerprint();
+
       const res = await fetch(`${getApiBase()}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -28,7 +45,8 @@ export default function Signup() {
           password,
           full_name: fullName,
           role: 'teacher',
-          tenant_name: 'UET Peshawar'
+          tenant_name: 'Department of Software Engineering UET PESHAWAR',
+          device_fingerprint: fingerprint,
         }),
       });
 
@@ -38,14 +56,13 @@ export default function Signup() {
         router.push('/login?registered=true');
       } else {
         const errMsg = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
-        // Show a friendlier message for duplicate accounts
-        if (errMsg?.toLowerCase().includes('already registered') || errMsg?.toLowerCase().includes('already exists')) {
+        if (errMsg?.toLowerCase().includes('already registered')) {
           setError('This email is already registered. Please log in instead.');
         } else {
           setError(errMsg || 'Failed to register');
         }
       }
-    } catch (err: any) {
+    } catch {
       setError('Network error. Could not reach server.');
     } finally {
       setLoading(false);
@@ -53,106 +70,97 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
-      style={{background: 'linear-gradient(135deg, #0f0c29, #302b63, #24243e)'}}>
-
-      <div className="absolute w-96 h-96 rounded-full opacity-20 blur-3xl"
-        style={{background: 'radial-gradient(circle, #7c3aed, transparent)', top: '-10%', left: '-10%'}} />
-      <div className="absolute w-96 h-96 rounded-full opacity-20 blur-3xl"
-        style={{background: 'radial-gradient(circle, #2563eb, transparent)', bottom: '-10%', right: '-10%'}} />
-
-      <div className="z-10 w-full max-w-md px-6">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl mb-4 bg-white p-2"
-            style={{boxShadow: '0 0 30px rgba(124,58,237,0.4)'}}>
-            <Image
-              src="https://upload.wikimedia.org/wikipedia/en/thumb/9/95/University_of_Engineering_and_Technology_Peshawar_logo.svg/250px-University_of_Engineering_and_Technology_Peshawar_logo.svg.png"
-              alt="UET Peshawar"
-              width={80}
-              height={80}
-              className="object-contain"
-              unoptimized
-            />
-          </div>
-          <h1 className="text-3xl font-black text-white tracking-tight" style={{fontFamily: 'var(--font-poppins)'}}>Teacher Sign Up</h1>
-          <p className="text-violet-300 mt-1 text-sm font-semibold">UET Peshawar Attendance System</p>
+    <div className="min-h-screen bg-white flex flex-col">
+      <header className="border-b border-slate-100 bg-white shadow-sm">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <div className="w-9 h-9 bg-white rounded-xl border border-slate-200 flex items-center justify-center overflow-hidden shadow-sm">
+              <Image
+                src="https://upload.wikimedia.org/wikipedia/en/thumb/9/95/University_of_Engineering_and_Technology_Peshawar_logo.svg/250px-University_of_Engineering_and_Technology_Peshawar_logo.svg.png"
+                alt="Department of Software Engineering UET PESHAWAR" width={32} height={32} className="object-contain" unoptimized
+              />
+            </div>
+            <span className="font-bold text-slate-900 text-sm">Department of Software Engineering UET PESHAWAR</span>
+          </Link>
         </div>
+      </header>
 
-        <form onSubmit={handleSignup} className="rounded-3xl p-8 border border-white/10 backdrop-blur-xl"
-          style={{background: 'rgba(255,255,255,0.03)', boxShadow: '0 25px 50px rgba(0,0,0,0.5)'}}>
-
-          {error && (
-            <div className="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium text-center">
-              ⚠️ {error}
-            </div>
-          )}
-
-          <div className="space-y-5">
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Full Name</label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl text-white placeholder-gray-600 outline-none border border-white/10 focus:border-violet-500/50 transition-all bg-white/5"
-                placeholder="Your Full Name"
-                required
+      <main className="flex-1 flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white border border-slate-200 shadow-md mb-5 overflow-hidden">
+              <Image
+                src="https://upload.wikimedia.org/wikipedia/en/thumb/9/95/University_of_Engineering_and_Technology_Peshawar_logo.svg/250px-University_of_Engineering_and_Technology_Peshawar_logo.svg.png"
+                alt="Department of Software Engineering UET PESHAWAR" width={70} height={70} className="object-contain" unoptimized
               />
             </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Email Address</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl text-white placeholder-gray-600 outline-none border border-white/10 focus:border-violet-500/50 transition-all bg-white/5"
-                placeholder="teacher@uetpeshawar.edu.pk"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl text-white placeholder-gray-600 outline-none border border-white/10 focus:border-violet-500/50 transition-all bg-white/5"
-                placeholder="••••••••"
-                required
-              />
-            </div>
+            <h1 className="text-2xl font-black text-slate-900">Teacher Registration</h1>
+            <p className="text-slate-500 mt-1 text-sm">Create your teacher account</p>
           </div>
 
-          {/* Fixed institution badge */}
-          <div className="mt-5 px-4 py-3 rounded-xl border border-violet-500/30 flex items-center gap-3"
-            style={{background: 'rgba(124,58,237,0.08)'}}>
-            <span className="text-xl">🏛️</span>
-            <div>
-              <p className="text-violet-300 text-xs font-bold uppercase tracking-wider">Institution</p>
-              <p className="text-white text-sm font-semibold">UET Peshawar</p>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-8">
+            {/* Warning notice */}
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100 mb-6">
+              <span className="text-amber-500 text-lg mt-0.5">⚠️</span>
+              <div>
+                <p className="text-xs font-semibold text-amber-800">Restricted Access</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Only pre-authorized UET faculty emails can register. Your device will be permanently linked to this account.
+                </p>
+              </div>
+            </div>
+
+            {error && (
+              <div className="mb-5 flex items-start gap-2 px-4 py-3 rounded-xl text-sm font-medium text-red-700 border border-red-200 bg-red-50">
+                <span>⚠️</span><span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSignup} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Full Name</label>
+                <input type="text" value={fullName} onChange={e => setFullName(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl text-slate-900 placeholder-slate-400 outline-none border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 bg-white text-sm"
+                  placeholder="Prof. Your Name" required />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Email Address</label>
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl text-slate-900 placeholder-slate-400 outline-none border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 bg-white text-sm"
+                  placeholder="teacher@uetpeshawar.edu.pk" required />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Password</label>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl text-slate-900 placeholder-slate-400 outline-none border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 bg-white text-sm"
+                  placeholder="••••••••" required />
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-3">
+                <span>🏛️</span>
+                <div>
+                  <p className="text-xs font-semibold text-slate-500">Institution (Fixed)</p>
+                  <p className="text-sm font-bold text-slate-900">Department of Software Engineering UET PESHAWAR</p>
+                </div>
+              </div>
+
+              <button type="submit" disabled={loading}
+                className="w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all hover:bg-blue-700 active:scale-[0.98] disabled:opacity-60 bg-blue-600 mt-2">
+                {loading ? 'Creating Account...' : '🚀 Create Teacher Account'}
+              </button>
+            </form>
+
+            <div className="mt-5 pt-5 border-t border-slate-100 text-center">
+              <p className="text-slate-500 text-sm">
+                Already have an account?{' '}
+                <Link href="/login" className="text-blue-600 font-semibold hover:text-blue-700">Sign In</Link>
+              </p>
             </div>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-6 py-3.5 rounded-xl font-bold text-white transition-all duration-200 hover:scale-[1.02] active:scale-95 disabled:opacity-70 disabled:hover:scale-100"
-            style={{background: 'linear-gradient(135deg, #7c3aed, #2563eb)', boxShadow: '0 0 20px rgba(124,58,237,0.4)'}}>
-            {loading ? 'Creating Account...' : 'Create Teacher Account'}
-          </button>
-
-          <div className="mt-6 text-center">
-            <p className="text-gray-400 text-sm">
-              Already have an account?{' '}
-              <Link href="/login" className="text-violet-400 font-bold hover:text-violet-300">
-                Log In
-              </Link>
-            </p>
-          </div>
-        </form>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
+
+

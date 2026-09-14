@@ -7,10 +7,12 @@ class UserCreate(BaseModel):
     full_name: str
     role: str = "student"
     tenant_name: str
+    device_fingerprint: Optional[str] = None
 
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+    device_fingerprint: Optional[str] = None
 
 class UserResponse(BaseModel):
     id: int

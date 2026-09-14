@@ -11,8 +11,10 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     full_name = Column(String)
-    role = Column(String, default="student") # admin, teacher, student
+    role = Column(String, default="student")  # admin, teacher, student
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # Locks teacher accounts to the device they first registered on
+    device_fingerprint = Column(String, nullable=True)
 
     tenant = relationship("Tenant")

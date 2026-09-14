@@ -3,6 +3,8 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { getApiBase } from '@/lib/api';
+import Link from 'next/link';
+import Image from 'next/image';
 
 function ScanContent() {
   const searchParams = useSearchParams();
@@ -10,7 +12,6 @@ function ScanContent() {
   const router = useRouter();
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'login_required'>('loading');
   const [message, setMessage] = useState('');
-
   const [hasCalled, setHasCalled] = useState(false);
 
   useEffect(() => {
@@ -37,72 +38,90 @@ function ScanContent() {
       const data = await res.json();
       if (res.ok) {
         setStatus('success');
-        setMessage('Your attendance has been recorded!');
+        setMessage('Your attendance has been recorded successfully!');
       } else {
         setStatus('error');
         setMessage(data.detail || 'Failed to mark attendance.');
       }
     } catch {
       setStatus('error');
-      setMessage('Cannot reach server. Make sure you are on the same WiFi network.');
+      setMessage('Cannot reach server. Make sure you are connected to the internet.');
     }
   };
 
   return (
-    <div className="relative z-10 w-full max-w-sm text-center">
-      <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-6"
-        style={{ background: 'linear-gradient(135deg, #059669, #0891b2)', boxShadow: '0 0 40px rgba(5,150,105,0.5)' }}>
-        <span className="text-4xl">🎓</span>
+    <div className="w-full max-w-sm">
+      {/* Logo */}
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-md mb-4 overflow-hidden">
+          <Image
+            src="https://upload.wikimedia.org/wikipedia/en/thumb/9/95/University_of_Engineering_and_Technology_Peshawar_logo.svg/250px-University_of_Engineering_and_Technology_Peshawar_logo.svg.png"
+            alt="Department of Software Engineering UET PESHAWAR"
+            width={54}
+            height={54}
+            className="object-contain"
+            unoptimized
+          />
+        </div>
+        <h1 className="text-xl font-black text-slate-900">Department of Software Engineering UET PESHAWAR</h1>
+        <p className="text-slate-500 text-sm">Smart Attendance System</p>
       </div>
-      <h1 className="text-3xl font-black text-white mb-2" style={{ fontFamily: 'var(--font-poppins)' }}>
-        Attend<span style={{ background: 'linear-gradient(90deg, #059669, #0891b2)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>X</span>
-      </h1>
 
-      <div className="mt-8 rounded-3xl p-8 border border-white/10 backdrop-blur-xl"
-        style={{ background: 'rgba(255,255,255,0.05)', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' }}>
-
+      {/* Status Card */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-8">
         {status === 'loading' && (
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 rounded-full border-4 border-emerald-500/30 border-t-emerald-500 animate-spin" />
-            <p className="text-white font-semibold" style={{ fontFamily: 'var(--font-poppins)' }}>Marking Attendance...</p>
-            <p className="text-gray-400 text-sm">Please wait</p>
+          <div className="flex flex-col items-center gap-4 py-4">
+            <div className="w-16 h-16 rounded-full border-4 border-emerald-200 border-t-emerald-600 animate-spin" />
+            <p className="text-slate-700 font-semibold">Marking Attendance...</p>
+            <p className="text-slate-400 text-sm">Please wait</p>
           </div>
         )}
 
         {status === 'success' && (
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center text-4xl"
-              style={{ background: 'rgba(5,150,105,0.2)', border: '2px solid rgba(5,150,105,0.5)', boxShadow: '0 0 30px rgba(5,150,105,0.4)' }}>✅</div>
-            <h2 className="text-2xl font-black text-white" style={{ fontFamily: 'var(--font-poppins)' }}>Attendance Marked!</h2>
-            <p className="text-emerald-400 text-sm font-medium">{message}</p>
-            <button onClick={() => router.push('/student/dashboard')}
-              className="mt-2 px-6 py-3 rounded-xl font-bold text-white text-sm transition-all hover:scale-105"
-              style={{ background: 'linear-gradient(135deg, #059669, #0891b2)', boxShadow: '0 0 20px rgba(5,150,105,0.4)' }}>
+          <div className="flex flex-col items-center gap-4 py-4">
+            <div className="w-20 h-20 rounded-full bg-emerald-50 border-2 border-emerald-300 flex items-center justify-center text-4xl shadow-sm">
+              ✅
+            </div>
+            <h2 className="text-xl font-black text-slate-900">Attendance Marked!</h2>
+            <p className="text-emerald-600 text-sm font-medium text-center">{message}</p>
+            <button
+              onClick={() => router.push('/student/dashboard')}
+              className="mt-2 w-full py-3 rounded-xl font-bold text-white text-sm bg-emerald-600 hover:bg-emerald-700 transition-colors"
+            >
               View My Dashboard →
             </button>
           </div>
         )}
 
         {status === 'error' && (
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center text-4xl"
-              style={{ background: 'rgba(220,38,38,0.15)', border: '2px solid rgba(220,38,38,0.4)', boxShadow: '0 0 30px rgba(220,38,38,0.3)' }}>❌</div>
-            <h2 className="text-xl font-black text-white" style={{ fontFamily: 'var(--font-poppins)' }}>Oops!</h2>
-            <p className="text-red-400 text-sm font-medium">{message}</p>
-            <button onClick={() => router.push('/student/dashboard')}
-              className="mt-2 px-6 py-3 rounded-xl font-bold text-white text-sm border border-white/10 transition-all hover:border-white/20"
-              style={{ background: 'rgba(255,255,255,0.05)' }}>← Go to Dashboard</button>
+          <div className="flex flex-col items-center gap-4 py-4">
+            <div className="w-20 h-20 rounded-full bg-red-50 border-2 border-red-200 flex items-center justify-center text-4xl">
+              ❌
+            </div>
+            <h2 className="text-xl font-black text-slate-900">Oops!</h2>
+            <p className="text-red-600 text-sm font-medium text-center">{message}</p>
+            <button
+              onClick={() => router.push('/student/dashboard')}
+              className="mt-2 w-full py-3 rounded-xl font-semibold text-slate-700 text-sm border border-slate-200 hover:bg-slate-50 transition-colors"
+            >
+              ← Go to Dashboard
+            </button>
           </div>
         )}
 
         {status === 'login_required' && (
-          <div className="flex flex-col items-center gap-4">
-            <div className="text-5xl">🔐</div>
-            <h2 className="text-xl font-black text-white" style={{ fontFamily: 'var(--font-poppins)' }}>Login Required</h2>
-            <p className="text-gray-400 text-sm">Please sign in to mark your attendance. Your QR token has been saved.</p>
-            <button onClick={() => router.push('/student')}
-              className="mt-2 px-6 py-3 rounded-xl font-bold text-white text-sm transition-all hover:scale-105"
-              style={{ background: 'linear-gradient(135deg, #059669, #0891b2)', boxShadow: '0 0 20px rgba(5,150,105,0.4)' }}>
+          <div className="flex flex-col items-center gap-4 py-4">
+            <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-3xl">
+              🔐
+            </div>
+            <h2 className="text-xl font-black text-slate-900">Login Required</h2>
+            <p className="text-slate-500 text-sm text-center">
+              Please sign in to mark your attendance. Your QR token has been saved.
+            </p>
+            <button
+              onClick={() => router.push('/student')}
+              className="mt-2 w-full py-3 rounded-xl font-bold text-white text-sm bg-blue-600 hover:bg-blue-700 transition-colors"
+            >
               🚀 Login as Student
             </button>
           </div>
@@ -114,16 +133,11 @@ function ScanContent() {
 
 export default function ScanPage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6"
-      style={{ background: 'linear-gradient(135deg, #0a1628, #1a2744, #0d2137)' }}>
-      <div className="fixed w-96 h-96 rounded-full opacity-20 blur-3xl pointer-events-none"
-        style={{ background: 'radial-gradient(circle, #059669, transparent)', top: '-5rem', right: '-5rem', animation: 'pulse 3s ease-in-out infinite' }} />
-      <div className="fixed w-80 h-80 rounded-full opacity-20 blur-3xl pointer-events-none"
-        style={{ background: 'radial-gradient(circle, #0891b2, transparent)', bottom: '-5rem', left: '-5rem', animation: 'pulse 5s ease-in-out infinite' }} />
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-6 py-12">
       <Suspense fallback={
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-full border-4 border-emerald-500/30 border-t-emerald-500 animate-spin" />
-          <p className="text-white">Loading...</p>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-full border-4 border-emerald-200 border-t-emerald-600 animate-spin" />
+          <p className="text-slate-500 text-sm">Loading...</p>
         </div>
       }>
         <ScanContent />
@@ -131,3 +145,5 @@ export default function ScanPage() {
     </div>
   );
 }
+
+

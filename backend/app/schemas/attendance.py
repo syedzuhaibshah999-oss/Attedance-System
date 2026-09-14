@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
 class AttendanceSessionCreate(BaseModel):
     course_id: int
@@ -10,9 +11,13 @@ class AttendanceSessionResponse(BaseModel):
     course_id: int
     qr_token: str
     expires_at: datetime
-    
+
     class Config:
         from_attributes = True
 
 class MarkAttendanceRequest(BaseModel):
     qr_token: str
+
+class ManualMarkRequest(BaseModel):
+    session_id: int
+    student_id: int

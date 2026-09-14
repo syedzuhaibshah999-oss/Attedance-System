@@ -124,3 +124,5 @@ export default function QrScanner({ onScan, onClose }: QrScannerProps) {
     </div>
   );
 }
+
+
