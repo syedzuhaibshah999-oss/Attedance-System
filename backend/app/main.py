@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.auth import router as auth_router
 from app.api.courses import router as courses_router
 from app.api.attendance import router as attendance_router
+from app.api.admin import router as admin_router
 from app.db.init_db import init_db
 
 app = FastAPI(
@@ -26,7 +27,7 @@ def on_startup():
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(courses_router, prefix="/api/courses", tags=["Courses"])
 app.include_router(attendance_router, prefix="/api/attendance", tags=["Attendance"])
-
+app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])
 
 @app.get("/")
 def read_root():

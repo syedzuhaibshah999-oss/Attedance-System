@@ -41,7 +41,9 @@ def get_courses(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_active_user)
 ):
-    if current_user.role in ["teacher", "admin"]:
+    if current_user.role == "admin":
+        courses = db.query(Course).filter(Course.tenant_id == current_user.tenant_id).all()
+    elif current_user.role == "teacher":
         courses = db.query(Course).filter(Course.teacher_id == current_user.id).all()
     else:
         # student courses

@@ -33,6 +33,20 @@ def seed():
             db.commit()
             db.refresh(teacher)
 
+        # Create Admin
+        admin = db.query(User).filter_by(email="admin@test.edu").first()
+        if not admin:
+            admin = User(
+                email="admin@test.edu",
+                hashed_password=get_password_hash("admin123"),
+                full_name="System Admin",
+                role="admin",
+                tenant_id=tenant.id
+            )
+            db.add(admin)
+            db.commit()
+            db.refresh(admin)
+
         # Create Student
         student = db.query(User).filter_by(email="student@test.edu").first()
         if not student:

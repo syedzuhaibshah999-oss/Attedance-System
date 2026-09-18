@@ -1,15 +1,18 @@
 "use client";
 
-import { useSearchParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { QRCodeCanvas } from 'qrcode.react';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { getApiBase } from '@/lib/api';
 
 function SessionContent() {
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const initialToken = searchParams.get('token');
+  const params = useParams();
+  const sessionId = params.id;
   const router = useRouter();
+  
+  const [currentToken, setCurrentToken] = useState(initialToken || '');
   const [timeLeft, setTimeLeft] = useState(120);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [uploadMsg, setUploadMsg] = useState('');
@@ -21,6 +24,27 @@ function SessionContent() {
     const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
     return () => clearInterval(timer);
   }, [timeLeft]);
+
+  useEffect(() => {
+    if (timeLeft <= 0 || !sessionId) return;
+    const rotateQr = async () => {
+      const authToken = localStorage.getItem('token');
+      if (!authToken) return;
+      try {
+        const res = await fetch(`${getApiBase()}/attendance/session/${sessionId}/rotate-qr`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentToken(data.qr_token);
+        }
+      } catch (err) { /* ignore network error, keep old token temporarily */ }
+    };
+
+    const rotationTimer = setInterval(rotateQr, 10000); // 10 seconds
+    return () => clearInterval(rotationTimer);
+  }, [timeLeft, sessionId]);
 
   const shareQrImage = async () => {
     const canvas = document.getElementById('session-qr') as HTMLCanvasElement;
@@ -76,7 +100,7 @@ function SessionContent() {
   const seconds = timeLeft % 60;
   const progress = (timeLeft / 120) * 100;
 
-  if (!token) return (
+  if (!currentToken) return (
     <div className="min-h-screen bg-white flex items-center justify-center">
       <div className="text-center">
         <div className="text-4xl mb-4">❌</div>
@@ -88,7 +112,7 @@ function SessionContent() {
     </div>
   );
 
-  const qrUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/student/scan?token=${token}`;
+  const qrUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/student/scan?token=${currentToken}`;
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -113,12 +137,12 @@ function SessionContent() {
           {/* Left: QR Code */}
           <div>
             <h1 className="text-2xl font-black text-slate-900 mb-1">Scan to Attend</h1>
-            <p className="text-slate-500 text-sm mb-6">Students scan this QR code to mark their attendance</p>
+            <p className="text-slate-500 text-sm mb-6">Students scan this QR code to mark their attendance. Code refreshes automatically.</p>
 
             <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-sm p-6">
               {/* QR Code */}
               <div className="flex justify-center mb-6">
-                <div className="p-4 bg-white rounded-xl shadow-md border border-slate-100">
+                <div className="p-4 bg-white rounded-xl shadow-md border border-slate-100 transition-opacity duration-300">
                   <QRCodeCanvas
                     id="session-qr"
                     value={qrUrl}
@@ -159,7 +183,7 @@ function SessionContent() {
               <div className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-100 flex items-center justify-between gap-3 mb-4">
                 <div className="truncate">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Session Token</p>
-                  <p className="text-blue-600 text-sm font-mono truncate">{token}</p>
+                  <p className="text-blue-600 text-sm font-mono truncate">{currentToken}</p>
                 </div>
                 <button
                   onClick={() => { navigator.clipboard.writeText(qrUrl); alert('Link copied!'); }}

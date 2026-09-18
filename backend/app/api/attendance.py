@@ -93,6 +93,31 @@ def start_attendance_session(
     db.refresh(new_session)
     return new_session
 
+# ─── Rotate QR token ────────────────────────────────────────────────────────
+@router.post("/session/{session_id}/rotate-qr")
+def rotate_qr_token(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_teacher_user),
+):
+    session = db.query(AttendanceSession).filter(
+        AttendanceSession.id == session_id
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+        
+    course = db.query(Course).filter(
+        Course.id == session.course_id,
+        Course.teacher_id == current_user.id
+    ).first()
+    if not course:
+        raise HTTPException(status_code=403, detail="Not authorized to manage this session")
+        
+    new_token = secrets.token_urlsafe(16)
+    session.qr_token = new_token
+    db.commit()
+    
+    return {"qr_token": new_token}
 
 # ─── Student self-mark via QR token ─────────────────────────────────────────
 
@@ -371,6 +396,51 @@ def get_teacher_summary(
     )
     return {"courses": len(course_ids), "students": enrolled_students,
             "sessions": len(sessions), "active_sessions": active_sessions}
+
+
+@router.get("/student-summary")
+def get_student_summary(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    """Attendance percentages and risk signals for the signed-in student."""
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="Only students can view this summary")
+    enrollments = db.query(Enrollment).filter(Enrollment.student_id == current_user.id).all()
+    courses, total_sessions, total_attended = [], 0, 0
+    for enrollment in enrollments:
+        course = db.query(Course).filter(Course.id == enrollment.course_id).first()
+        if not course:
+            continue
+        sessions = db.query(AttendanceSession).filter(AttendanceSession.course_id == course.id).count()
+        attended = db.query(AttendanceRecord).join(AttendanceSession).filter(
+            AttendanceSession.course_id == course.id, AttendanceRecord.student_id == current_user.id).count()
+        percentage = round((attended / sessions * 100) if sessions else 0, 1)
+        courses.append({"course_id": course.id, "course_name": course.name, "course_code": course.code,
+                        "sessions": sessions, "attended": attended, "percentage": percentage,
+                        "at_risk": sessions > 0 and percentage < 75})
+        total_sessions += sessions
+        total_attended += attended
+    overall = round((total_attended / total_sessions * 100) if total_sessions else 0, 1)
+    return {"overall_percentage": overall, "total_sessions": total_sessions,
+            "attended_sessions": total_attended,
+            "at_risk_courses": [course for course in courses if course["at_risk"]], "courses": courses}
+
+
+@router.get("/admin-overview")
+def get_admin_overview(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    """Institution-wide course and teacher activity for administrators."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Administrator access required")
+    courses = db.query(Course).filter(Course.tenant_id == current_user.tenant_id).all()
+    course_data = []
+    for course in courses:
+        teacher = db.query(User).filter(User.id == course.teacher_id).first()
+        sessions = db.query(AttendanceSession).filter(AttendanceSession.course_id == course.id).count()
+        students = db.query(Enrollment).filter(Enrollment.course_id == course.id).count()
+        course_data.append({"id": course.id, "name": course.name, "code": course.code,
+                            "teacher_name": teacher.full_name if teacher else "Unassigned",
+                            "teacher_email": teacher.email if teacher else None,
+                            "sessions": sessions, "students": students})
+    return {"courses": course_data, "total_courses": len(course_data),
+            "total_sessions": sum(course["sessions"] for course in course_data)}
 
 
 # ─── Defaulters ─────────────────────────────────────────────────────────────

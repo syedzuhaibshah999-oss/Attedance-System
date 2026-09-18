@@ -56,7 +56,17 @@ export default function TeacherLogin() {
 
       const data = await res.json();
       localStorage.setItem('token', data.access_token);
-      router.push('/dashboard');
+      const profileResponse = await fetch(`${getApiBase()}/auth/me`, {
+        headers: { Authorization: `Bearer ${data.access_token}` },
+      });
+      const profile = await profileResponse.json() as { role?: string };
+      
+      if (profile.role === 'student') {
+        localStorage.removeItem('token');
+        throw new Error('Students cannot access the teacher portal. Please use the student portal.');
+      }
+      
+      router.push(profile.role === 'admin' ? '/admin' : '/dashboard');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unable to sign in. Please try again.');
     } finally {
