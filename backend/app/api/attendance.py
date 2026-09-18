@@ -175,9 +175,17 @@ def mark_attendance_manually(
     student = db.query(User).filter(
         User.id == req.student_id,
         User.role == "student",
+        User.tenant_id == current_user.tenant_id,
     ).first()
     if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
+        raise HTTPException(status_code=404, detail="Student not found in your institution")
+
+    enrollment = db.query(Enrollment).filter(
+        Enrollment.course_id == session.course_id,
+        Enrollment.student_id == student.id,
+    ).first()
+    if not enrollment:
+        raise HTTPException(status_code=400, detail="Student is not enrolled in this course")
 
     # Prevent duplicate
     existing = db.query(AttendanceRecord).filter(
@@ -334,6 +342,35 @@ def get_attendance_report(
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     return _build_attendance_report(course_id, db)
+
+
+@router.get("/summary")
+def get_teacher_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_teacher_user),
+):
+    """Dashboard totals for the signed-in teacher's courses."""
+    course_ids = [course_id for (course_id,) in db.query(Course.id).filter(
+        Course.teacher_id == current_user.id
+    ).all()]
+    if not course_ids:
+        return {"courses": 0, "students": 0, "sessions": 0, "active_sessions": 0}
+
+    now_utc = datetime.now(timezone.utc)
+    sessions = db.query(AttendanceSession).filter(
+        AttendanceSession.course_id.in_(course_ids)
+    ).all()
+    enrolled_students = db.query(Enrollment.student_id).filter(
+        Enrollment.course_id.in_(course_ids)
+    ).distinct().count()
+    active_sessions = sum(
+        1 for attendance_session in sessions
+        if (attendance_session.expires_at.replace(tzinfo=timezone.utc)
+            if attendance_session.expires_at.tzinfo is None
+            else attendance_session.expires_at) > now_utc
+    )
+    return {"courses": len(course_ids), "students": enrolled_students,
+            "sessions": len(sessions), "active_sessions": active_sessions}
 
 
 # ─── Defaulters ─────────────────────────────────────────────────────────────

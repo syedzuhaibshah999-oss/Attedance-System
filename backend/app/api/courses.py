@@ -25,8 +25,11 @@ def create_course(
     db.commit()
     db.refresh(new_course)
 
-    # Auto-enroll all existing students into this newly created course
-    students = db.query(User).filter(User.role == "student").all()
+    # Keep enrollment within the teacher's institution.
+    students = db.query(User).filter(
+        User.role == "student",
+        User.tenant_id == current_user.tenant_id,
+    ).all()
     for student in students:
         db.add(Enrollment(course_id=new_course.id, student_id=student.id))
     db.commit()
@@ -56,6 +59,14 @@ def enroll_student(
     course = db.query(Course).filter(Course.id == enroll_in.course_id, Course.teacher_id == current_user.id).first()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found or access denied")
+
+    student = db.query(User).filter(
+        User.id == enroll_in.student_id,
+        User.role == "student",
+        User.tenant_id == current_user.tenant_id,
+    ).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found in your institution")
     
     existing = db.query(Enrollment).filter(
         Enrollment.course_id == enroll_in.course_id, 

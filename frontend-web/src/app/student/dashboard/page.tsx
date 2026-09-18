@@ -18,9 +18,12 @@ const COURSE_COLORS = [
   { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-700', badge: 'bg-cyan-100' },
 ];
 
+type Course = { id: number; name: string; code: string };
+type User = { full_name: string; email: string };
+
 export default function StudentDashboard() {
-  const [courses, setCourses] = useState<any[]>([]);
-  const [user, setUser] = useState<any>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
   const [manualToken, setManualToken] = useState('');

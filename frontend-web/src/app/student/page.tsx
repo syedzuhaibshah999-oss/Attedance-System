@@ -43,8 +43,8 @@ export default function StudentLogin() {
       } else {
         router.push('/student/dashboard');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unable to sign in. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getApiBase } from '@/lib/api';
 import Link from 'next/link';
@@ -57,8 +57,8 @@ export default function TeacherLogin() {
       const data = await res.json();
       localStorage.setItem('token', data.access_token);
       router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unable to sign in. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -81,11 +81,9 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    # Auto-enroll student into all courses in their tenant
+    # Auto-enroll a student into courses in their own institution only.
     if new_user.role == "student":
         all_courses = db.query(Course).filter(Course.tenant_id == tenant.id).all()
-        if not all_courses:
-            all_courses = db.query(Course).all()
         for course in all_courses:
             db.add(Enrollment(course_id=course.id, student_id=new_user.id))
         db.commit()

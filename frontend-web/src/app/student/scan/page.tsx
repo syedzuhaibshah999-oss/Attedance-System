@@ -1,9 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { getApiBase } from '@/lib/api';
-import Link from 'next/link';
 import Image from 'next/image';
 
 function ScanContent() {
@@ -12,28 +11,24 @@ function ScanContent() {
   const router = useRouter();
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'login_required'>('loading');
   const [message, setMessage] = useState('');
-  const [hasCalled, setHasCalled] = useState(false);
+  const hasCalled = useRef(false);
 
   useEffect(() => {
-    if (!token || hasCalled) return;
-    setHasCalled(true);
+    if (!token || hasCalled.current) return;
+    hasCalled.current = true;
 
     const studentToken = localStorage.getItem('student_token');
     if (!studentToken) {
       sessionStorage.setItem('pending_qr_token', token);
-      setStatus('login_required');
-      return;
+      const timeoutId = window.setTimeout(() => setStatus('login_required'), 0);
+      return () => window.clearTimeout(timeoutId);
     }
-    markAttendance(token, studentToken);
-  }, [token, hasCalled]);
-
-  const markAttendance = async (qrToken: string, authToken: string) => {
-    setStatus('loading');
-    try {
-      const res = await fetch(`${getApiBase()}/attendance/mark`, {
+    const markAttendance = async () => {
+      try {
+        const res = await fetch(`${getApiBase()}/attendance/mark`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({ qr_token: qrToken }),
+          body: JSON.stringify({ qr_token: token }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -43,11 +38,13 @@ function ScanContent() {
         setStatus('error');
         setMessage(data.detail || 'Failed to mark attendance.');
       }
-    } catch {
-      setStatus('error');
-      setMessage('Cannot reach server. Make sure you are connected to the internet.');
-    }
-  };
+      } catch {
+        setStatus('error');
+        setMessage('Cannot reach server. Make sure you are connected to the internet.');
+      }
+    };
+    void markAttendance();
+  }, [token]);
 
   return (
     <div className="w-full max-w-sm">

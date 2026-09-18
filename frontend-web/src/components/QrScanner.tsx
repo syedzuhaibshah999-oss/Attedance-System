@@ -7,14 +7,29 @@ interface QrScannerProps {
   onClose: () => void;
 }
 
+type QrCodeInstance = {
+  start: (
+    cameraConfig: { facingMode: string },
+    config: { fps: number; qrbox: { width: number; height: number } },
+    onSuccess: (decodedText: string) => void,
+    onError: () => void,
+  ) => Promise<void>;
+  stop: () => Promise<void>;
+};
+
 export default function QrScanner({ onScan, onClose }: QrScannerProps) {
-  const scannerRef = useRef<any>(null);
+  const scannerRef = useRef<QrCodeInstance | null>(null);
+  const isScanningRef = useRef(false);
+  const onScanRef = useRef(onScan);
   const containerId = "qr-reader";
   const [error, setError] = useState<string | null>(null);
-  const [started, setStarted] = useState(false);
 
   useEffect(() => {
-    let html5QrCode: any;
+    onScanRef.current = onScan;
+  }, [onScan]);
+
+  useEffect(() => {
+    let html5QrCode: QrCodeInstance;
 
     const startScanner = async () => {
       try {
@@ -42,20 +57,20 @@ export default function QrScanner({ onScan, onClose }: QrScannerProps) {
             try {
               html5QrCode.stop().catch(() => {});
             } catch {}
-            onScan(token);
+            onScanRef.current(token);
           },
           () => {} // ignore frame errors
         );
-        setStarted(true);
-      } catch (err: any) {
-        setError(err?.message || "Camera access denied. Please allow camera permissions.");
+        isScanningRef.current = true;
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Camera access denied. Please allow camera permissions.");
       }
     };
 
     startScanner();
 
     return () => {
-      if (scannerRef.current && started) {
+      if (scannerRef.current && isScanningRef.current) {
         scannerRef.current.stop().catch(() => {});
       }
     };
@@ -70,10 +85,10 @@ export default function QrScanner({ onScan, onClose }: QrScannerProps) {
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h3 className="text-xl font-black text-white" style={{ fontFamily: "var(--font-poppins)" }}>
+            <h3 className="text-xl font-black text-white" style={{ fontFamily: "var(--font-ui)" }}>
               📷 Scan QR Code
             </h3>
-            <p className="text-gray-400 text-xs mt-0.5">Point your camera at the teacher's QR code</p>
+              <p className="text-gray-400 text-xs mt-0.5">Point your camera at the teacher&apos;s QR code</p>
           </div>
           <button onClick={onClose}
             className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-white border border-white/10 hover:border-white/20 transition-all"

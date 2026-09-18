@@ -1,13 +1,12 @@
 "use client";
 
-import { use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { getApiBase } from '@/lib/api';
 
-function SessionContent({ sessionId }: { sessionId: string }) {
+function SessionContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const router = useRouter();
@@ -261,7 +260,7 @@ function SessionContent({ sessionId }: { sessionId: string }) {
                 <li>1. Upload any QR code image</li>
                 <li>2. FastAPI uses <code className="bg-blue-100 px-1 rounded">pyzbar</code> to decode it server-side</li>
                 <li>3. The embedded attendance token is extracted</li>
-                <li>4. Use the token to mark a student's attendance</li>
+                <li>4. Use the token to mark a student&apos;s attendance</li>
               </ul>
             </div>
           </div>
@@ -271,16 +270,14 @@ function SessionContent({ sessionId }: { sessionId: string }) {
   );
 }
 
-// Next.js 15: params is now a Promise — use `use()` to unwrap
-export default function SessionPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function SessionPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="w-10 h-10 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin" />
       </div>
     }>
-      <SessionContent sessionId={id} />
+      <SessionContent />
     </Suspense>
   );
 }

@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getApiBase } from '@/lib/api';
 import Image from 'next/image';
-import Link from 'next/link';
 
 const COURSE_COLORS = [
   { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', badge: 'bg-blue-100', dot: 'bg-blue-500' },
@@ -15,10 +14,18 @@ const COURSE_COLORS = [
   { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-700', badge: 'bg-cyan-100', dot: 'bg-cyan-500' },
 ];
 
+type Course = { id: number; name: string; code: string };
+type User = { full_name: string; email: string };
+type AttendanceSession = { id: number; qr_token: string };
+type SessionStudent = { student_id: number; student_name: string; student_email: string; is_present: boolean };
+type ReportRow = { student_id: number; student_name: string; student_email: string; attended_sessions: number; total_sessions: number; attendance_percentage: number };
+type ReportData = { course: string; report: ReportRow[] };
+
 export default function Dashboard() {
-  const [courses, setCourses] = useState<any[]>([]);
-  const [user, setUser] = useState<any>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState({ courses: 0, students: 0, sessions: 0, active_sessions: 0 });
   const [starting, setStarting] = useState<number | null>(null);
 
   // Create Course Modal
@@ -28,14 +35,14 @@ export default function Dashboard() {
   const [creating, setCreating] = useState(false);
 
   // Report Modal
-  const [reportCourse, setReportCourse] = useState<any>(null);
-  const [reportData, setReportData] = useState<any>(null);
+  const [reportCourse, setReportCourse] = useState<Course | null>(null);
+  const [reportData, setReportData] = useState<ReportData | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
 
   // Manual Attendance Modal
-  const [manualSession, setManualSession] = useState<any>(null);
-  const [manualCourse, setManualCourse] = useState<any>(null);
-  const [sessionStudents, setSessionStudents] = useState<any[]>([]);
+  const [manualSession, setManualSession] = useState<AttendanceSession | null>(null);
+  const [manualCourse, setManualCourse] = useState<Course | null>(null);
+  const [sessionStudents, setSessionStudents] = useState<SessionStudent[]>([]);
   const [manualLoading, setManualLoading] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
 
@@ -55,9 +62,13 @@ export default function Dashboard() {
       fetch(`${getApiBase()}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
       }).then(res => res.json()),
-    ]).then(([coursesData, userData]) => {
+      fetch(`${getApiBase()}/attendance/summary`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(res => res.ok ? res.json() : null),
+    ]).then(([coursesData, userData, summaryData]) => {
       if (Array.isArray(coursesData)) setCourses(coursesData);
       if (userData) setUser(userData);
+      if (summaryData) setSummary(summaryData);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [router]);
@@ -73,6 +84,7 @@ export default function Dashboard() {
       });
       if (res.ok) {
         const data = await res.json();
+        setSummary(prev => ({ ...prev, sessions: prev.sessions + 1, active_sessions: prev.active_sessions + 1 }));
         router.push(`/session/${data.id}?token=${data.qr_token}`);
       } else {
         const err = await res.json();
@@ -85,7 +97,7 @@ export default function Dashboard() {
     }
   };
 
-  const openManualModal = async (course: any) => {
+  const openManualModal = async (course: Course) => {
     setManualCourse(course);
     setManualLoading(true);
     const token = localStorage.getItem('token');
@@ -105,6 +117,7 @@ export default function Dashboard() {
       }
       const sessionData = await startRes.json();
       setManualSession(sessionData);
+      setSummary(prev => ({ ...prev, sessions: prev.sessions + 1, active_sessions: prev.active_sessions + 1 }));
 
       // Load students for this session
       const studRes = await fetch(`${getApiBase()}/attendance/session/${sessionData.id}/students`, {
@@ -121,7 +134,7 @@ export default function Dashboard() {
     }
   };
 
-  const toggleStudentAttendance = async (student: any) => {
+  const toggleStudentAttendance = async (student: SessionStudent) => {
     if (!manualSession) return;
     setTogglingId(student.student_id);
     const token = localStorage.getItem('token');
@@ -151,7 +164,7 @@ export default function Dashboard() {
     }
   };
 
-  const viewReport = async (course: any) => {
+  const viewReport = async (course: Course) => {
     setReportCourse(course);
     setReportLoading(true);
     const token = localStorage.getItem('token');
@@ -178,6 +191,7 @@ export default function Dashboard() {
       if (res.ok) {
         const newCourse = await res.json();
         setCourses(prev => [...prev, newCourse]);
+        setSummary(prev => ({ ...prev, courses: prev.courses + 1 }));
         setShowCreateModal(false);
         setNewCourseName('');
         setNewCourseCode('');
@@ -200,6 +214,7 @@ export default function Dashboard() {
       });
       if (res.ok) {
         setCourses(prev => prev.filter(c => c.id !== courseId));
+        setSummary(prev => ({ ...prev, courses: Math.max(0, prev.courses - 1) }));
       } else {
         alert('Failed to delete course');
       }
@@ -272,10 +287,10 @@ export default function Dashboard() {
         {/* Stats row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Total Courses', value: courses.length, icon: '📚', color: 'text-blue-700', bg: 'bg-blue-50' },
-            { label: 'Enrolled Students', value: reportData?.report?.length ?? '—', icon: '👥', color: 'text-emerald-700', bg: 'bg-emerald-50' },
-            { label: 'Sessions Run', value: reportData?.report?.[0]?.total_sessions ?? '—', icon: '📡', color: 'text-violet-700', bg: 'bg-violet-50' },
-            { label: 'Active Today', value: reportData ? 1 : 0, icon: '✅', color: 'text-amber-700', bg: 'bg-amber-50' },
+            { label: 'Total Courses', value: summary.courses, icon: '📚', color: 'text-blue-700', bg: 'bg-blue-50' },
+            { label: 'Enrolled Students', value: summary.students, icon: '👥', color: 'text-emerald-700', bg: 'bg-emerald-50' },
+            { label: 'Sessions Run', value: summary.sessions, icon: '📡', color: 'text-violet-700', bg: 'bg-violet-50' },
+            { label: 'Active Now', value: summary.active_sessions, icon: '✅', color: 'text-amber-700', bg: 'bg-amber-50' },
           ].map((stat, i) => (
             <div key={i} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
               <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center text-xl mb-3`}>
@@ -512,7 +527,7 @@ export default function Dashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {reportData.report.map((row: any) => (
+                          {reportData.report.map((row) => (
                             <tr key={row.student_id} className="hover:bg-slate-50 transition-colors">
                               <td className="px-4 py-3">
                                 <p className="font-semibold text-slate-900">{row.student_name}</p>
