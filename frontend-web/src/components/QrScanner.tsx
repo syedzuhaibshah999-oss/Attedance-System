@@ -7,15 +7,7 @@ interface QrScannerProps {
   onClose: () => void;
 }
 
-type QrCodeInstance = {
-  start: (
-    cameraConfig: { facingMode: string },
-    config: { fps: number; qrbox: { width: number; height: number } },
-    onSuccess: (decodedText: string) => void,
-    onError: () => void,
-  ) => Promise<void>;
-  stop: () => Promise<void>;
-};
+type QrCodeInstance = any;
 
 export default function QrScanner({ onScan, onClose }: QrScannerProps) {
   const scannerRef = useRef<QrCodeInstance | null>(null);

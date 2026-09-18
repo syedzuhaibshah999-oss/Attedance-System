@@ -6,7 +6,7 @@ import { getApiBase } from "@/lib/api";
 
 type Course = { id: number; name: string; code: string; teacher_name: string; teacher_email: string | null; sessions: number; students: number };
 type Overview = { courses: Course[]; total_courses: number; total_sessions: number };
-type UserAccount = { id: int; email: string; full_name: string; role: string; is_active: boolean };
+type UserAccount = { id: number; email: string; full_name: string; role: string; is_active: boolean };
 
 export default function AdminPage() {
   const [overview, setOverview] = useState<Overview | null>(null);

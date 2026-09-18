@@ -27,7 +27,7 @@ function ScanContent() {
       try {
         const res = await fetch(`${getApiBase()}/attendance/mark`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${studentToken}` },
           body: JSON.stringify({ qr_token: token }),
       });
       const data = await res.json();
